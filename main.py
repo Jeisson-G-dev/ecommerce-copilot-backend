@@ -14,5 +14,5 @@ app.add_middleware(
 )
 
 # Montar rutas
-app.include_router(chat.router)
+app.include_router(chat.chat_router)
 app.include_router(vision.router)

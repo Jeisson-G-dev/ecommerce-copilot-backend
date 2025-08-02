@@ -1,32 +1,41 @@
-from fastapi import APIRouter
-from pydantic import BaseModel
-from app.services.gemini_client import ask_gemini
-from app.models.ui_context import UiContext
+from fastapi import APIRouter, status
+from app.graph.main_graph import run_graph
+from app.models.request_model import NewChat
+from logger import logger
 
-router = APIRouter()
+chat_router = APIRouter()
 
+@chat_router.post(
+    "/chat",
+    summary="Chat con el asistente",
+    status_code=status.HTTP_200_OK,
+)
+def assistant(request: NewChat):
+    """
+    Procesa un mensaje del usuario a través del grafo de conversación.
 
-class ChatRequest(BaseModel):
-    userInput: str
-    uiContext: UiContext
+    Args:
+        request (NewChat): Objeto que contiene el mensaje y el ID del usuario.
 
+    Returns:
+        Dict[str, Any]: Última respuesta generada por el asistente.
+    """
+    try:
+        response = run_graph(request.userInput, request.uiContext)
+        last_message = response.get("messages", [])[-1]
 
+        # Contenido principal
+        result = {"response": last_message.content}
 
-@router.post("/chat")
-async def chat(req: ChatRequest):
-    prompt = build_prompt(req.userInput, req.uiContext)
-    reply = ask_gemini(prompt)
-    return {"reply": reply}
+        # Si hay campos adicionales (como `popup`), los incluimos
+        if hasattr(last_message, "additional_kwargs") and last_message.additional_kwargs:
+            result.update(last_message.additional_kwargs)
 
+        return result
 
-def build_prompt(user_input: str, context: UiContext) -> str:
-    visible = ", ".join(p.name for p in context.visibleProducts)
-    cart = ", ".join(context.cartItems)
-    prompt = f"""El usuario está en la vista '{context.view}'.
-        Ve los productos: {visible}.
-        Tiene en el carrito: {cart}.
-        Dice: \"{user_input}\".
-        Responde de forma clara y sugiere un paso siguiente si aplica."""
-    print(prompt)  # Debugging line to see the prompt
-    return prompt
-
+    except Exception as e:
+        logger.error(
+            "Error al procesar la solicitud de chat",
+            exc_info=True
+        )
+        return {"error": f"Error interno del servidor: {str(e)}"}
