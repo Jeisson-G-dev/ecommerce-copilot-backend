@@ -16,7 +16,7 @@ La estructura de respuesta **DEBE** ser en formato JSON con los siguientes campo
 
 - response: breve texto de respuesta conversacional al usuario.
 - popup:
-    - type: siempre debe ser "guide-step".
+    - type: siempre debe ser "info".
     - target: uno de los valores de los grupos disponibles en "availableTargets" (productos, navegación o filtros).
     - title: título breve para el tooltip.
     - message: explicación corta para el usuario.
@@ -58,7 +58,7 @@ def tooltip_node(state: GraphState) -> GraphState:
     """
     Nodo que genera una guía visual (tooltip) basada en el contexto y mensaje del usuario.
     """
-
+    logger.info("Ejecutando tooltip_node")
     structured_llm = llm.with_structured_output(TooltipOutput)
 
     user_message = {

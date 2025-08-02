@@ -1,25 +1,27 @@
 from pydantic import BaseModel
-from typing import Literal, Optional, Dict
+from typing import Literal, Dict, Union
 
 from pydantic import field_validator
 import json
 
 class TooltipPopup(BaseModel):
-    type: Literal["guide-step"]
+    type: Literal["guide-step", "info"]
     target: str
     title: str
     message: str
-    targetInfo: Dict[str, int]
+    targetInfo: Union[Dict[str, int], str]
 
     @field_validator("targetInfo", mode="before")
     @classmethod
-    def parse_target_info(cls, value):
-        if isinstance(value, str):
+    def parse_target_info(cls, v):
+        if isinstance(v, dict):
+            return v
+        if isinstance(v, str):
             try:
-                return json.loads(value)
-            except json.JSONDecodeError:
+                return json.loads(v.replace("'", '"'))  # <- convierte comillas simples
+            except Exception as e:
                 raise ValueError("targetInfo debe ser un dict o un string JSON válido")
-        return value
+        raise ValueError("targetInfo debe ser un dict o un string JSON válido")
 
 class TooltipOutput(BaseModel):
     response: str
